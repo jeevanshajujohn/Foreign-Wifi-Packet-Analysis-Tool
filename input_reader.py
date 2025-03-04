@@ -163,8 +163,12 @@ if __name__ == "__main__":
           if switch == 1:
                 addition()
 
-          elif switch == 2:
-                remove()
-          else:
-                help_result()
-                exit()
+        elif switch == 2:
+            remove()
+
+        elif switch == 3:
+            directory()
+
+        else:
+            help_result()
+            exit()
