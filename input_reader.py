@@ -3,8 +3,6 @@
 import csv
 import os
 import subprocess
-import time
-from re import split
 
 network_file_path = '/home/FPAT/reg_net.csv'
 net_max = 0
@@ -48,15 +46,18 @@ def capture_snapshot():
     return snapshot
 
 def display():
-
+    print("")
 
 def easy_addition():
     curr_networks = capture_snapshot()
     for i in range(len(curr_networks)):
-        print(i, curr_networks[i].values())
+        print(i, end= '\t')
+        for j in list(curr_networks[i].values()):
+                print(j, end="\t")
+        print()
     index = int(input("Enter the required network index: "))
     req = list(curr_networks[index].values())
-    IPV6, SSID , infra, channel, rate, sec_prot = req[1], req[0], req[2], req[3], req[4], req[7]
+    IPV6, SSID , infra, channel, rate, sec_prot = req[1], req[0], req[2], req[3], req[4], req[6]
     manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
 
 
@@ -77,7 +78,7 @@ def manual_addition(SSID: str, IPV6: str, infra: str, channel: str, rate: str, s
 
         file_exists = os.path.isfile(network_file_path) and os.path.getsize(network_file_path) > 0
         with open(network_file_path, 'a' if file_exists else 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=['SSID', 'IPV6'])
+            writer = csv.DictWriter(csvfile, fieldnames=['SSID', 'IPV6', 'Infra', 'Channel', 'Rate', 'Security Protocol'])
             if not file_exists:
                 writer.writeheader()
             writer.writerow(data)
@@ -126,19 +127,44 @@ def directory():
         return False
 
 
+def addition():
+    choice = input("Would you like to add another network with easy mode? (y/n): ")
+    if choice.lower() == 'y':
+        easy_addition()
+    else:
+        choice = input("Would you like to add another network with manual mode? (y/n): ")
+        if choice.lower() == 'y':
+            SSID =  input("Enter the SSID: ")
+            IPV6 = input("Enter the IPV6: ")
+            choice = input("Would you like to add more details? (Channel, Infrastructure, Rate, Security Protocol (y/n): ")
+            if choice.lower() == 'y':
+                channel = input("Enter the channel: ")
+                infra = input("Enter the infrastructure: ")
+                rate = input("Enter the rate: ")
+                sec_prot = input("Enter the security protocol: ")
+            else:
+                channel = None
+                infra = None
+                rate = None
+                sec_prot = None
+            manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
+        else: return
+
+
+
 if __name__ == "__main__":
-    easy_addition()
-    # try:
-    #       os.mkdir("/home/FPAT")
-    # except FileExistsError:
-    #       print("Welcome Back to Foreign Packet Analysis Tool")
-    # print("Enter 1 to add, 2 to remove")
-    # while True:
-    #       switch = int(input("Enter your choice: "))
-    #       if switch == 1:
-    #             easy_addition()
-    #       elif switch == 2:
-    #             remove()
-    #       else:
-    #             help_result()
-    #             exit()
+    try:
+          os.mkdir("/home/FPA")
+    except FileExistsError:
+          print("Welcome Back to Foreign Packet Analysis Tool")
+    print("Enter 1 to Add Networks, 2 to Remove Networks, 3 for Help and Exit")
+    while True:
+          switch = int(input("Enter your choice: "))
+          if switch == 1:
+                addition()
+
+          elif switch == 2:
+                remove()
+          else:
+                help_result()
+                exit()
