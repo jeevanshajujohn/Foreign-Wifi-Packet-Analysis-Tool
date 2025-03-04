@@ -156,8 +156,8 @@ if __name__ == "__main__":
     try:
           os.mkdir("/home/FPA")
     except FileExistsError:
-          print("Welcome Back to Foreign Packet Analysis Tool")
-    print("Enter 1 to Add Networks, 2 to Remove Networks, 3 for Help and Exit")
+        print("Welcome Back to Foreign Packet Analysis Tool")
+    print("Enter 1 to Add Networks, 2 to Remove Networks,3 to Display all Registered Networks 4 for Help and Exit")
     while True:
           switch = int(input("Enter your choice: "))
           if switch == 1:
