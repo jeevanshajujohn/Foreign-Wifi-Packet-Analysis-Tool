@@ -1,12 +1,19 @@
-#!/usr/bin/env python3
+#!/usr/bin/e nv python3
 
 import csv
 import os
 import subprocess
+import time
+from mimetypes import knownfiles
 
 network_file_path = '/home/FPAT/reg_net.csv'
+log_file_path = '/home/FPAT/log.csv'
 net_max = 0
-
+RED = '\033[31m'
+GREEN = '\033[32m'
+BLUE = '\033[34m'
+RESET = '\033[0m'
+debug_count = 0
 
 def help_result():
     print("Welcome to Foreign Packet Analysis Tool\n"
@@ -32,37 +39,53 @@ def capture_snapshot():
     networks = result.stdout.split('\n')
     snapshot = []
     for network in networks[0:len(networks) - 1]:
-            IPV6 = network[2:4] + network[5:8] + network[9:12] + network[13:16] + network[17:20] + network[21:24]
-            parts = network.split(':')
-            SSID = parts[7]
-            infra = parts[8]
-            channel = parts[9]
-            signal_speed = parts[10]
-            signal_strength = parts[11]
-            sec_prot = parts[13]
-            net = {'IPV6': IPV6, 'SSID': SSID, 'Infrastructure': infra, 'Channel': channel, 'Signal Speed': signal_speed,'Signal Strength': signal_strength, 'Security Protocol': sec_prot}
-            snapshot.append(net)
+        IPV6 = network[2:4] + network[5:8] + network[9:12] + network[13:16] + network[17:20] + network[21:24]
+        parts = network.split(':')
+        SSID = parts[7]
+        infra = parts[8]
+        channel = parts[9]
+        signal_speed = parts[10]
+        signal_strength = parts[11]
+        sec_prot = parts[13]
+        net = {'IPV6': IPV6, 'SSID': SSID, 'Infrastructure': infra, 'Channel': channel, 'Signal Speed': signal_speed,
+               'Signal Strength': signal_strength, 'Security Protocol': sec_prot}
+        snapshot.append(net)
 
     return snapshot
 
-def display():
-    print("")
+def add_all_networks():
+    current = capture_snapshot()
+
+    print(f"{GREEN}\n\nThe networks to be added will be: \n\n{RESET}")
+    for i in range(len(current)):
+        print(i, end="\t")
+        for j in list(current[i].values()):
+            print(j, end="\t")
+        print()
+    if input("Do you wish to continue with this list? [y/N] ") == "y":
+        for j in range(len(current)):
+            req = list(current[j].values())
+            SSID, IPV6, infra, channel, rate, sec_prot = req[1], req[0], req[2], req[3], req[4], req[6]
+            manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
+    else:
+        return
 
 def easy_addition():
     curr_networks = capture_snapshot()
     for i in range(len(curr_networks)):
-        print(i, end= '\t')
+        print(i, end='\t')
         for j in list(curr_networks[i].values()):
-                print(j, end="\t")
+            print(j, end="\t")
         print()
     index = int(input("Enter the required network index: "))
     req = list(curr_networks[index].values())
-    IPV6, SSID , infra, channel, rate, sec_prot = req[1], req[0], req[2], req[3], req[4], req[6]
+    SSID, IPV6, infra, channel, rate, sec_prot = req[1], req[0], req[2], req[3], req[4], req[6]
     manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
 
 
+
 def manual_addition(SSID: str, IPV6: str, infra: str, channel: str, rate: str, sec_prot: str):
-    data = {'SSID': SSID, 'IPV6': IPV6, 'Infra': infra, 'Channel': channel, 'Rate': rate, 'Security Protocol': sec_prot}
+    data = {'SSID': SSID, 'IPV6': IPV6, 'Infrastructure': infra, 'Channel': channel, 'Rate': rate, 'Security Protocol': sec_prot}
 
     try:
         os.makedirs(os.path.dirname(network_file_path), exist_ok=True)
@@ -72,13 +95,13 @@ def manual_addition(SSID: str, IPV6: str, infra: str, channel: str, rate: str, s
                 reader = csv.DictReader(csvfile)
                 existing_data = [row for row in reader]
                 for row in existing_data:
-                    if row['SSID'] == SSID or row['IPV6'] == IPV6:
+                    if row['IPV6'] == IPV6:
                         print("Duplicate entry found. Network not added.")
                         return
 
         file_exists = os.path.isfile(network_file_path) and os.path.getsize(network_file_path) > 0
         with open(network_file_path, 'a' if file_exists else 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=['SSID', 'IPV6', 'Infra', 'Channel', 'Rate', 'Security Protocol'])
+            writer = csv.DictWriter(csvfile, fieldnames=['SSID', 'IPV6', 'Infrastructure', 'Channel', 'Rate', 'Security Protocol'])
             if not file_exists:
                 writer.writeheader()
             writer.writerow(data)
@@ -100,11 +123,17 @@ def remove():
             print("Network removed successfully.")
             return
         else:
-            if input("Remove Single? Enter 'y' to continue: ").lower() == 'y':
-                IPV6 = input("Enter the IPV6 address: ")
-                with open(network_file_path, "r") as f:
-                    reader = csv.reader(f)
-                    rows_keep = [row for row in reader if row[1] != IPV6]
+            if input("Remove based on Index?: ").lower() == 'y':
+                index = int(input("Enter the required network index: "))
+                with open(network_file_path, 'r') as file:
+                    reader = csv.reader(file)
+                    rows_keep = [row for row in reader]
+
+                if 0 <= index < len(rows_keep):
+                    del rows_keep[index]
+                else:
+                    print(f"Index {index} is out of range.")
+                    return
 
                 with open(network_file_path, "w", newline="") as wrt:
                     writer = csv.writer(wrt)
@@ -112,15 +141,29 @@ def remove():
                         writer.writerow(row)
                 return
             else:
-                return
+                if input("Remove Manually? Enter 'y' to continue: ").lower() == 'y':
+                    IPV6 = input("Enter the IPV6 address: ")
+                    with open(network_file_path, "r") as f:
+                        reader = csv.reader(f)
+                        rows_keep = [row for row in reader if row[1] != IPV6]
 
+                    with open(network_file_path, "w", newline="") as wrt:
+                        writer = csv.writer(wrt)
+                        for row in rows_keep:
+                            writer.writerow(row)
+                    return
 
 def directory():
     if os.path.isfile(network_file_path):
         with open(network_file_path, mode='r', newline='') as file:
             reader = csv.reader(file)
+            index = 0
             for lines in reader:
-                print(lines)
+                print(index, end='\t')
+                index =  index + 1
+                for i in lines:
+                    print(i, end = "\t")
+                print(end = '\n')
             return True
     else:
         print("No registered networks")
@@ -128,46 +171,149 @@ def directory():
 
 
 def addition():
-    choice = input("Would you like to add another network with easy mode? (y/n): ")
-    if choice.lower() == 'y':
-        easy_addition()
+    if input("Would you like to add all the current detected networks to the registration list?: ").lower() == 'y':
+        add_all_networks()
     else:
-        choice = input("Would you like to add another network with manual mode? (y/n): ")
+        choice = input("Would you like to add another network with easy mode? (y/n): ")
         if choice.lower() == 'y':
-            SSID =  input("Enter the SSID: ")
-            IPV6 = input("Enter the IPV6: ")
-            choice = input("Would you like to add more details? (Channel, Infrastructure, Rate, Security Protocol (y/n): ")
+            easy_addition()
+        else:
+            choice = input("Would you like to add another network with manual mode? (y/n): ")
             if choice.lower() == 'y':
-                channel = input("Enter the channel: ")
-                infra = input("Enter the infrastructure: ")
-                rate = input("Enter the rate: ")
-                sec_prot = input("Enter the security protocol: ")
+                SSID = input("Enter the SSID: ")
+                IPV6 = input("Enter the IPV6: ")
+                choice = input(
+                    "Would you like to add more details? (Channel, Infrastructure, Rate, Security Protocol (y/n): ")
+                if choice.lower() == 'y':
+                    channel = input("Enter the channel: ")
+                    infra = input("Enter the infrastructure: ")
+                    rate = input("Enter the rate: ")
+                    sec_prot = input("Enter the security protocol: ")
+                else:
+                    channel = None
+                    infra = None
+                    rate = None
+                    sec_prot = None
+                manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
             else:
-                channel = None
-                infra = None
-                rate = None
-                sec_prot = None
-            manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
-        else: return
+                return
 
+def debugger():
+    print("Debugging Mode")
 
+def scan_header():
+    print('Index\tIPV6\t\t\tSSID\tInfrastructure\tChannel\tS. Speed\tS. Strength\tSecurity Protocol')
+
+def empty_scan(duration: int):
+    prev_snapshot = []
+    for _ in range(duration):
+        os.system('cls' if os.name == 'nt' else 'clear')
+        curr_networks = capture_snapshot()
+        if prev_snapshot == []:
+            scan_header()
+            for i in range(len(curr_networks)):
+                print(i, end='\t')
+                for j in list(curr_networks[i].values()):
+                    print(j, end="\t")
+                print()
+            time.sleep(10)
+            prev_snapshot = curr_networks
+        else:
+            scan_header()
+            for i in range(len(curr_networks)):
+                print(i, end='\t')
+                num = 0
+                flag = False
+                for j in list(curr_networks[i].values()):
+                    if num != 5:
+                        print(j, end="\t")
+                    else:
+                        for entry in prev_snapshot:
+                            if entry['IPV6'] == curr_networks[i]['IPV6']:
+                                flag = True
+                                if int(entry['Signal Strength']) < int(j):
+                                    print(f"{GREEN}{j}{RESET}", end="\t")
+
+                                elif entry['Signal Strength'] > curr_networks[i]['Signal Strength']:
+                                    print(f"{RED}{j}{RESET}", end="\t")
+
+                                else:
+                                    print(f"{j}", end="\t")
+                            else:
+                                continue
+                        if not flag:
+                            print(f"{BLUE}{j}{RESET}", end="\t")
+                    num += 1
+                print()
+            time.sleep(10)
+            prev_snapshot = curr_networks
+
+def raw_log_file_network_add(SSID):
+    try:
+        os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+
+    except PermissionError:
+        print("No permission to create the log file")
+        return
+    except Exception as e:
+        print(e)
+
+    pass
+
+def new_time_instance_adder():
+    pass
+
+def check_if_foreign(duration: int):
+    ipv6_list = []
+    if os.path.isfile(network_file_path):
+        with open(network_file_path, mode='r', newline='') as file:
+            reader = csv.reader(file)
+            reader.__next__()
+            for row in reader:
+                ipv6_list.append(row[1])
+
+    flag = False
+    for _ in range(duration):
+        new_time_instance_adder()
+        os.system('cls' if os.name == 'nt' else 'clear')
+        curr_networks = capture_snapshot()
+        scan_header()
+        for i in range(len(curr_networks)):
+            print(i, end='\t')
+            for j in list(curr_networks[i].values()):
+                if curr_networks[i]["IPV6"] in ipv6_list:
+                    flag = True
+                if flag:
+                    print(f"{j}", end="\t")
+                else:
+                    raw_log_file_network_add(curr_networks[i])
+                    print(f"{RED}{j}{RESET}", end="\t")
+            print()
+            flag = False
+        time.sleep(10)
 
 if __name__ == "__main__":
     try:
-          os.mkdir("/home/FPA")
+        os.mkdir("/home/FPAT")
     except FileExistsError:
         print("Welcome Back to Foreign Packet Analysis Tool")
     print("Enter 1 to Add Networks, 2 to Remove Networks,3 to Display all Registered Networks 4 for Help and Exit")
     while True:
-          switch = int(input("Enter your choice: "))
-          if switch == 1:
-                addition()
+        switch = int(input("Enter your choice: "))
+        if switch == 1:
+            addition()
 
         elif switch == 2:
             remove()
 
         elif switch == 3:
             directory()
+
+        elif switch == 4:
+            empty_scan(20)
+
+        elif switch == 5:
+            check_if_foreign(int(input("Enter scan duration: ")))
 
         else:
             help_result()
