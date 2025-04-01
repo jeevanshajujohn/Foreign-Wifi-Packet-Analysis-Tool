@@ -65,12 +65,11 @@ def add_all_networks():
     if input("Do you wish to continue with this list? [y/N] ") == "y":
         for j in range(len(current)):
             req = list(current[j].values())
-            SSID, IPV6, infra, channel, rate, sec_prot = req[1], req[0], req[2], req[3], req[4], req[6]
-            manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
+            network_details_processing(req)
     else:
         return
 
-def easy_addition():
+def easy_network_addition():
     curr_networks = capture_snapshot()
     for i in range(len(curr_networks)):
         print(i, end='\t')
@@ -79,12 +78,14 @@ def easy_addition():
         print()
     index = int(input("Enter the required network index: "))
     req = list(curr_networks[index].values())
+    network_details_processing(req)
+
+def network_details_processing(req):
     SSID, IPV6, infra, channel, rate, sec_prot = req[1], req[0], req[2], req[3], req[4], req[6]
-    manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
+    manual_network_addition(SSID, IPV6, infra, channel, rate, sec_prot)
 
 
-
-def manual_addition(SSID: str, IPV6: str, infra: str, channel: str, rate: str, sec_prot: str):
+def manual_network_addition(SSID: str, IPV6: str, infra: str, channel: str, rate: str, sec_prot: str):
     data = {'SSID': SSID, 'IPV6': IPV6, 'Infrastructure': infra, 'Channel': channel, 'Rate': rate, 'Security Protocol': sec_prot}
 
     try:
@@ -176,7 +177,7 @@ def addition():
     else:
         choice = input("Would you like to add another network with easy mode? (y/n): ")
         if choice.lower() == 'y':
-            easy_addition()
+            easy_network_addition()
         else:
             choice = input("Would you like to add another network with manual mode? (y/n): ")
             if choice.lower() == 'y':
@@ -194,7 +195,7 @@ def addition():
                     infra = None
                     rate = None
                     sec_prot = None
-                manual_addition(SSID, IPV6, infra, channel, rate, sec_prot)
+                manual_network_addition(SSID, IPV6, infra, channel, rate, sec_prot)
             else:
                 return
 
