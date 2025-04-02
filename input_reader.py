@@ -1,13 +1,11 @@
-#!/usr/bin/e nv python3
-
 import csv
 import os
 import subprocess
 import time
-from mimetypes import knownfiles
+from datetime import datetime
 
 network_file_path = '/home/FPAT/reg_net.csv'
-log_file_path = '/home/FPAT/log.csv'
+log_file_path = '/home/FPAT/'
 net_max = 0
 RED = '\033[31m'
 GREEN = '\033[32m'
@@ -249,9 +247,17 @@ def empty_scan(duration: int):
             time.sleep(10)
             prev_snapshot = curr_networks
 
-def raw_log_file_network_add(SSID):
+def foreign_log_adder(network, instance):
+    new_file_path = log_file_path + 'log' + instance + '.csv'
+    data = {'Time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'SSID': network['SSID'], 'IPV6': network['IPV6'], 'Channel': network['Channel'], 'Signal Strength' : network['Signal Strength']}
     try:
-        os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+        os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
+        file_exists = os.path.isfile(new_file_path) and os.path.getsize(new_file_path) > 0
+        with open(new_file_path, 'a' if file_exists else 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile,fieldnames=['Time', 'SSID', 'IPV6', 'Channel', 'Signal Strength'])
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(data)
 
     except PermissionError:
         print("No permission to create the log file")
@@ -261,11 +267,9 @@ def raw_log_file_network_add(SSID):
 
     pass
 
-def new_time_instance_adder():
-    pass
-
 def check_if_foreign(duration: int):
     ipv6_list = []
+    instance = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     if os.path.isfile(network_file_path):
         with open(network_file_path, mode='r', newline='') as file:
             reader = csv.reader(file)
@@ -275,7 +279,6 @@ def check_if_foreign(duration: int):
 
     flag = False
     for _ in range(duration):
-        new_time_instance_adder()
         os.system('cls' if os.name == 'nt' else 'clear')
         curr_networks = capture_snapshot()
         scan_header()
@@ -287,8 +290,9 @@ def check_if_foreign(duration: int):
                 if flag:
                     print(f"{j}", end="\t")
                 else:
-                    raw_log_file_network_add(curr_networks[i])
                     print(f"{RED}{j}{RESET}", end="\t")
+            if not flag:
+                foreign_log_adder(curr_networks[i], instance)
             print()
             flag = False
         time.sleep(10)
@@ -298,24 +302,27 @@ if __name__ == "__main__":
         os.mkdir("/home/FPAT")
     except FileExistsError:
         print("Welcome Back to Foreign Packet Analysis Tool")
-    print("Enter 1 to Add Networks, 2 to Remove Networks,3 to Display all Registered Networks 4 for Help and Exit")
+    print("Enter 1 to Add Networks, 2 to Remove Networks,3 to Display all Registered Networks, 4 for an empty scan, 5 for full scan, 6 to exit")
     while True:
-        switch = int(input("Enter your choice: "))
-        if switch == 1:
-            addition()
+        try:
+            switch = int(input("Enter your choice: "))
+            if switch == 1:
+                addition()
 
-        elif switch == 2:
-            remove()
+            elif switch == 2:
+                remove()
 
-        elif switch == 3:
-            directory()
+            elif switch == 3:
+                directory()
 
-        elif switch == 4:
-            empty_scan(20)
+            elif switch == 4:
+                empty_scan(20)
 
-        elif switch == 5:
-            check_if_foreign(int(input("Enter scan duration: ")))
+            elif switch == 5:
+                check_if_foreign(int(input("Enter scan duration: ")))
 
-        else:
-            help_result()
-            exit()
+            else:
+                help_result()
+                exit()
+        except Exception as e:
+            print(e)
