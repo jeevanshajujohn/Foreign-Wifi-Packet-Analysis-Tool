@@ -2,6 +2,7 @@ import csv
 import os
 import subprocess
 import time
+import  argparse
 from datetime import datetime
 
 network_file_path = '/home/FPAT/reg_net.csv'
@@ -112,45 +113,43 @@ def manual_network_addition(SSID: str, IPV6: str, infra: str, channel: str, rate
     except Exception as e:
         print(f"An error occurred: {e}")
 
-
-def remove():
+def remove_all():
     if not directory():
         return
+    os.remove(network_file_path)
+    return
+
+def easy_remove(index:int):
+    if not directory():
+        return
+    with open(network_file_path, 'r') as file:
+        reader = csv.reader(file)
+        rows_keep = [row for row in reader]
+
+    if 0 <= index < len(rows_keep):
+        del rows_keep[index]
     else:
-        if input("Remove all? Enter 'y' to continue: ").lower() == 'y':
-            os.remove(network_file_path)
-            print("Network removed successfully.")
-            return
-        else:
-            if input("Remove based on Index?: ").lower() == 'y':
-                index = int(input("Enter the required network index: "))
-                with open(network_file_path, 'r') as file:
-                    reader = csv.reader(file)
-                    rows_keep = [row for row in reader]
+        print(f"Index {index} is out of range.")
+        return
 
-                if 0 <= index < len(rows_keep):
-                    del rows_keep[index]
-                else:
-                    print(f"Index {index} is out of range.")
-                    return
+    with open(network_file_path, "w", newline="") as wrt:
+        writer = csv.writer(wrt)
+        for row in rows_keep:
+            writer.writerow(row)
+    return
 
-                with open(network_file_path, "w", newline="") as wrt:
-                    writer = csv.writer(wrt)
-                    for row in rows_keep:
-                        writer.writerow(row)
-                return
-            else:
-                if input("Remove Manually? Enter 'y' to continue: ").lower() == 'y':
-                    IPV6 = input("Enter the IPV6 address: ")
-                    with open(network_file_path, "r") as f:
-                        reader = csv.reader(f)
-                        rows_keep = [row for row in reader if row[1] != IPV6]
+def remove_manual(IPV6: str):
+    if not directory():
+        return
+    with open(network_file_path, "r") as f:
+        reader = csv.reader(f)
+        rows_keep = [row for row in reader if row[1] != IPV6]
 
-                    with open(network_file_path, "w", newline="") as wrt:
-                        writer = csv.writer(wrt)
-                        for row in rows_keep:
-                            writer.writerow(row)
-                    return
+    with open(network_file_path, "w", newline="") as wrt:
+        writer = csv.writer(wrt)
+        for row in rows_keep:
+            writer.writerow(row)
+    return
 
 def directory():
     if os.path.isfile(network_file_path):
@@ -168,34 +167,6 @@ def directory():
         print("No registered networks")
         return False
 
-
-def addition():
-    if input("Would you like to add all the current detected networks to the registration list?: ").lower() == 'y':
-        add_all_networks()
-    else:
-        choice = input("Would you like to add another network with easy mode? (y/n): ")
-        if choice.lower() == 'y':
-            easy_network_addition()
-        else:
-            choice = input("Would you like to add another network with manual mode? (y/n): ")
-            if choice.lower() == 'y':
-                SSID = input("Enter the SSID: ")
-                IPV6 = input("Enter the IPV6: ")
-                choice = input(
-                    "Would you like to add more details? (Channel, Infrastructure, Rate, Security Protocol (y/n): ")
-                if choice.lower() == 'y':
-                    channel = input("Enter the channel: ")
-                    infra = input("Enter the infrastructure: ")
-                    rate = input("Enter the rate: ")
-                    sec_prot = input("Enter the security protocol: ")
-                else:
-                    channel = None
-                    infra = None
-                    rate = None
-                    sec_prot = None
-                manual_network_addition(SSID, IPV6, infra, channel, rate, sec_prot)
-            else:
-                return
 
 def debugger():
     print("Debugging Mode")
@@ -301,28 +272,56 @@ if __name__ == "__main__":
     try:
         os.mkdir("/home/FPAT")
     except FileExistsError:
-        print("Welcome Back to Foreign Packet Analysis Tool")
-    print("Enter 1 to Add Networks, 2 to Remove Networks,3 to Display all Registered Networks, 4 for an empty scan, 5 for full scan, 6 to exit")
-    while True:
-        try:
-            switch = int(input("Enter your choice: "))
-            if switch == 1:
-                addition()
+        print("")
+    parser = argparse.ArgumentParser(description="Welcome to Foreign Packet Analysis Tool."
+                                                "Done by to Sunayana Debsikdar, Drishya M Nair, Jeevan Shaju John\n")
 
-            elif switch == 2:
-                remove()
+    parser.add_argument("-a", "--add", action= "store_true" , help="Add networks based on index")
+    parser.add_argument("-aa", "--add_all", action="store_true", help="Add all current networks")
+    parser.add_argument("-am", "--add_manual", nargs='+',
+                        metavar= "ARGUMENTS",
+                        help="Manually add a network (SSID IPv6 Infrastructure Channel Rate Security Protocol)")
+    parser.add_argument("-r", "--remove", type=int, metavar="index", help="Remove networks")
+    parser.add_argument("-ra", "--remove_all", action="store_true", help="Remove all current networks")
+    parser.add_argument("-rm", "--remove_manual", metavar="IPV6", help="Remove networks manually (specify IPV6)")
+    parser.add_argument("-dir", "--directory", action="store_true", help="Display all registered networks")
+    parser.add_argument("-es", "--empty_scan", type=int, metavar="DURATION",
+                        help="Perform an empty scan (duration in seconds)")
+    parser.add_argument("-fs", "--full_scan", type=int, metavar="DURATION",
+                        help="Perform a full scan (duration in seconds)")
 
-            elif switch == 3:
-                directory()
+    args = parser.parse_args()
 
-            elif switch == 4:
-                empty_scan(20)
+    if not any(vars(args).values()):  # Check if no arguments were provided
+        parser.print_help()
+        exit(1)
+    if args.add is not None:
+        easy_network_addition()
+    elif args.add_all:
+        add_all_networks()
+    elif args.add_manual:
+        if len(args.add_manual) < 2:
+            parser.error("Error: SSID and IPv6 are required for manual addition.")
+        ssid = args.add_manual[0]
+        ipv6 = args.add_manual[1]
+        infra = args.add_manual[2] if len(args.add_manual) > 2 else None
+        channel = args.add_manual[3] if len(args.add_manual) > 3 else None
+        rate = args.add_manual[4] if len(args.add_manual) > 4 else None
+        sec_prot = args.add_manual[5] if len(args.add_manual) > 5 else None
+        manual_network_addition(ssid, ipv6, infra, channel, rate, sec_prot)
 
-            elif switch == 5:
-                check_if_foreign(int(input("Enter scan duration: ")))
+    elif args.remove:
+        easy_remove(args.remove)
 
-            else:
-                help_result()
-                exit()
-        except Exception as e:
-            print(e)
+    elif args.remove_all:
+        remove_all()
+
+    elif args.remove_manual:
+        remove_manual(args.remove_manual)
+    elif args.directory:
+        directory()
+    elif args.empty_scan is not None:
+        empty_scan(args.empty_scan)
+
+    else:
+        print("cooked")
