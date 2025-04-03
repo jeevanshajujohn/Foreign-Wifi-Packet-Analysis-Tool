@@ -14,25 +14,6 @@ BLUE = '\033[34m'
 RESET = '\033[0m'
 debug_count = 0
 
-def help_result():
-    print("Welcome to Foreign Packet Analysis Tool\n"
-          "Credits to Sunayana Debsikdar, Drishya M Nair, Jeevan Shaju John\n"
-          "Use fpat [option] [target] to run the program\n"
-          "\n"
-          "Options\n"
-          "-h : Help\n"
-          "-dir : View Directory of Registered Networks\n"
-          "-scan : Start scanning for all current signals\n"
-          "-madd [address]: Manually add new wifi networks with their IPV6 addresses\n"
-          "-eadd : Easier addition of IPV6 addresses by creating a capture of all the currently existingn\n"
-          "        wifi networks to choose ones to add from the current list\n"
-          "-rem : Remove required wifi network from the current list or remove all wifi networks\n"
-          "-logs : Display all the captured signal reports available\n"
-          "-log [index] : Display detailed logs of the selected captured signal reports\n"
-          "-logd [index] : Delete the chosen log report\n"
-          "\n")
-
-
 def capture_snapshot():
     result = subprocess.run(["nmcli", "-t", "dev", "wifi"], capture_output=True, text=True)
     networks = result.stdout.split('\n')
