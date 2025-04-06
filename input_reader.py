@@ -2,7 +2,7 @@ import csv
 import os
 import subprocess
 import time
-import  argparse
+import argparse
 from datetime import datetime
 
 network_file_path = '/home/FPAT/reg_net.csv'
@@ -22,13 +22,13 @@ def capture_snapshot():
         IPV6 = network[2:4] + network[5:8] + network[9:12] + network[13:16] + network[17:20] + network[21:24]
         parts = network.split(':')
         SSID = parts[7]
-        infra = parts[8]
-        channel = parts[9]
+        Infra = parts[8]
+        Channel = parts[9]
         signal_speed = parts[10]
         signal_strength = parts[11]
-        sec_prot = parts[13]
-        net = {'IPV6': IPV6, 'SSID': SSID, 'Infrastructure': infra, 'Channel': channel, 'Signal Speed': signal_speed,
-               'Signal Strength': signal_strength, 'Security Protocol': sec_prot}
+        Sec_prot = parts[13]
+        net = {'IPV6': IPV6, 'SSID': SSID, 'Infrastructure': Infra, 'Channel': Channel, 'Signal Speed': signal_speed,
+               'Signal Strength': signal_strength, 'Security Protocol': Sec_prot}
         snapshot.append(net)
 
     return snapshot
@@ -61,12 +61,12 @@ def easy_network_addition():
     network_details_processing(req)
 
 def network_details_processing(req):
-    SSID, IPV6, infra, channel, rate, sec_prot = req[1], req[0], req[2], req[3], req[4], req[6]
-    manual_network_addition(SSID, IPV6, infra, channel, rate, sec_prot)
+    SSID, IPV6, Infra, Channel, Rate, Sec_prot = req[1], req[0], req[2], req[3], req[4], req[6]
+    manual_network_addition(SSID, IPV6, Infra, Channel, Rate, Sec_prot)
 
 
-def manual_network_addition(SSID: str, IPV6: str, infra: str, channel: str, rate: str, sec_prot: str):
-    data = {'SSID': SSID, 'IPV6': IPV6, 'Infrastructure': infra, 'Channel': channel, 'Rate': rate, 'Security Protocol': sec_prot}
+def manual_network_addition(SSID: str, IPV6: str, Infra: str, Channel: str, Rate: str, Sec_prot: str):
+    data = {'SSID': SSID, 'IPV6': IPV6, 'Infrastructure': Infra, 'Channel': Channel, 'Rate': Rate, 'Security Protocol': Sec_prot}
 
     try:
         os.makedirs(os.path.dirname(network_file_path), exist_ok=True)
@@ -153,7 +153,7 @@ def debugger():
     print("Debugging Mode")
 
 def scan_header():
-    print('Index\tIPV6\t\t\tSSID\tInfrastructure\tChannel\tS. Speed\tS. Strength\tSecurity Protocol')
+    print('Index\tIPV6\t\t\tSSID\tInfrastructure\tChannel\tS. Speed\tS. Strength')
 
 def empty_scan(duration: int):
     prev_snapshot = []
@@ -276,7 +276,7 @@ if __name__ == "__main__":
     if not any(vars(args).values()):  # Check if no arguments were provided
         parser.print_help()
         exit(1)
-    if args.add is not None:
+    if args.add:
         easy_network_addition()
     elif args.add_all:
         add_all_networks()
@@ -303,6 +303,8 @@ if __name__ == "__main__":
         directory()
     elif args.empty_scan is not None:
         empty_scan(args.empty_scan)
+    elif args.full_scan is not None:
+        check_if_foreign(args.full_scan)
 
     else:
         print("cooked")
